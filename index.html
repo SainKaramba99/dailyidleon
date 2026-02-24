@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <meta charset="UTF-8">
+    <title>Daily Checklist - Idleon</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at center, #a34b4b 0%, #2b1a1a 100%);
+            background-attachment: fixed;
+            display: flex;
+            justify-content: center;
+            padding: 50px 15px;
+            margin: 0;
+        }
+
+        .container {
+            position: relative;
+            background: rgba(45, 25, 25, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            width: 520px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 { 
+            text-align: center; 
+            margin-bottom: 10px; 
+            background: linear-gradient(to right, #ffd966, #ff8c66);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress {
+            height: 100%;
+            background: #e65c5c;
+            width: 0%;
+            transition: 0.3s;
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px 0;
+        }
+
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: transform 0.2s ease, background 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .task-item:hover { 
+            background: rgba(255, 255, 255, 0.08); 
+            border-color: rgba(255, 140, 102, 0.2);
+        }
+
+        .task-name { cursor: pointer; flex-grow: 1; }
+
+        .task-name.completed { 
+            text-decoration: line-through; 
+            opacity: 0.4; 
+            color: #ffd966;
+        }
+
+        .delete-btn {
+            cursor: pointer;
+            font-size: 18px;
+            opacity: 0.5;
+            transition: 0.2s;
+            margin-left: 10px;
+        }
+
+        .delete-btn:hover { opacity: 1; transform: scale(1.1); }
+
+        #tilesWrapper {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.4s ease-out;
+        }
+
+        .tiles {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .tiles.show { opacity: 1; }
+
+		.tile {
+			background: rgba(163, 75, 75, 0.4);
+			color: #fff;
+			padding: 14px 10px; /* Zmniejszony boczny padding */
+			text-align: center;
+			border-radius: 14px;
+			cursor: pointer;
+			transition: background 0.2s ease, transform 0.2s ease;
+			font-weight: 500;
+			border: 1px solid rgba(255, 255, 255, 0.05);
+			
+			/* Kluczowe poprawki dla długiego tekstu: */
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 60px;       /* Zapewnia stałą wysokość dla krótkich tekstów */
+			font-size: 13px;        /* Nieco mniejszy font lepiej znosi długie nazwy */
+			word-break: break-word; /* Rozbija bardzo długie słowa */
+			hyphens: auto;          /* Dodaje dywizy przy przenoszeniu (opcjonalne) */
+			line-height: 1.2;
+		}
+
+        .tile:hover {
+            background: rgba(230, 92, 92, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .top-right {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            display: flex;
+            gap: -2px;
+            align-items: center;
+        }
+
+        .icon-button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .icon-button:hover { opacity: 1; }
+
+        .info-icon-wrapper { position: relative; }
+
+        .info-tooltip {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            width: 300px;
+            padding: 18px;
+            border-radius: 12px;
+            background: rgba(40, 20, 20, 0.98);
+            border: 1px solid rgba(255, 217, 102, 0.3);
+            color: #eee;
+            font-size: 13px;
+            line-height: 1.5;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-5px);
+            transition: 0.3s ease-in-out;
+            z-index: 1001;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .info-icon-wrapper:hover .info-tooltip { opacity: 1; transform: translateY(0); }
+
+        #addTaskHeader {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.02);
+            color: rgba(255, 255, 255, 0.8);
+            text-align: left;
+            transition: 0.2s;
+        }
+
+        #addTaskHeader:hover { 
+            background: rgba(255, 255, 255, 0.05); 
+            border-color: rgba(255, 217, 102, 0.4);
+        }
+
+        .decorative-separator {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255, 217, 102, 0.2), transparent);
+            margin: 20px 0;
+        }
+
+        #glunko {
+            filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
+            opacity: 0.9;
+        }
+
+        /* Styl okna Gratulacji */
+        #congratsMessage {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            background: rgba(20, 10, 10, 0.95);
+            padding: 40px;
+            border-radius: 30px;
+            border: 2px solid #ffd966;
+            color: #ffd966;
+            text-align: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 50px rgba(255, 217, 102, 0.3);
+        }
+
+        #congratsMessage.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        #congratsMessage h2 {
+            margin: 0;
+            font-size: 36px;
+            background: linear-gradient(to right, #ffd966, #ff8c66);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body>
+
+<img id="glunko" src="https://idleon.wiki/images/thumb/2/22/Glunko_Supreme_Idle.gif/135px-Glunko_Supreme_Idle.gif"
+     style="position: fixed; bottom: 10px; left: 0; width: 100px; height: auto; z-index: 1000;">
+
+<div id="congratsMessage">
+    <h2>Dobra robota!️</h2>
+    <p style="color: white; margin-top: 10px;">Wszystkie daily wykonane!</p>
+    <button onclick="document.getElementById('congratsMessage').classList.remove('show')" 
+            style="background: #e65c5c; border: none; color: white; padding: 10px 20px; border-radius: 10px; cursor: pointer; margin-top: 15px; font-weight: bold;">
+        Zamknij
+    </button>
+</div>
+
+<div class="container">
+    <h1>Daily Checklist - Idleon</h1>
+
+    <div class="progress-bar"><div class="progress" id="progress"></div></div>
+
+    <ul id="checklist" class="checklist"></ul>
+
+    <div class="top-right">
+        <button id="clearCompleted" class="icon-button" title="Wyczyść ukończone">⌛</button>
+        
+        <div class="info-icon-wrapper">
+            <div class="icon-button">📜</div>
+<div class="info-tooltip">
+    <strong style="color: #ffd966; font-size: 16px; display: block; margin-bottom: 10px; border-bottom: 1px solid rgba(255,217,102,0.3); padding-bottom: 5px;">
+        Centrum Pomocy
+    </strong>
+    
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px;">
+        <li><span style="color: #ffd966;"></span> <strong>Personalizacja:</strong> Przeciągaj zadania, aby ustalić własną kolejność priorytetów.</li>
+		<li><span style="color: #ffd966;"></span> <strong>Odznacz wszystko:</strong> Kliknięcie w ⌛ wyczyści Twoją listę i pozwoli zacząć od nowa.</li>		
+        <li><span style="color: #ffd966;"></span> <strong>Przekreślony Golden Pocketwatch:</strong> Ikonka przekreślonego złotego zegarka oznacza, że po jego użyciu dana aktywność się nie resetuje.</li>
+        <li><span style="color: #ffd966;"></span> <strong>Auto-reset:</strong> Twoje postępy zerują się automatycznie każdego dnia o północy.</li>
+        <li><span style="color: #ffd966;"></span> <strong>Zapis danych:</strong> Wszystko zapisuje się w pamięci Twojej przeglądarki.</li>
+        <li><span style="color: #ffd966;"></span> <strong>Glunko:</strong> Jest tutaj, żebyś nie czuł się samotny podczas grindu!</li>
+    </ul>
+
+    <div style="margin-top: 15px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-size: 12px;">
+        <div style="font-weight: bold; color: #ff8c66; margin-bottom: 4px;">Masz pomysł na ulepszenie/zmianę? Brakuje dziennych aktywności?</div>
+        Napisz do mnie na Discordzie: <span style="color: #ffd966; font-family: monospace;">saianek</span> 🎮
+    </div>
+
+    <div style="margin-top: 15px; font-style: Segoe UI; opacity: 0.6; text-align: center; font-size: 11px;">
+        Powodzenia w Idleon! ⚔️<br>
+        <span style="letter-spacing: 1px;">by Sain & AI</span><br>
+        Ostatnia aktualizacja: 24.02.2026 r.
+    </div>
+</div>
+        </div>
+    </div>
+
+    <div class="decorative-separator"></div>
+    <button id="addTaskHeader">Lista zadań</button>
+    <div id="tilesWrapper">
+        <div id="tiles" class="tiles"></div>
+    </div>
+</div>
+
+<script>
+// --- Dane i pamięć ---
+const allTasks = [
+{ text: "Włączenie gry", emoji: "https://emojis.slackmojis.com/emojis/images/1643515256/12777/cowtumble.png" },
+{ text: "Skille Vmana – print i prezent", emoji: "https://i.postimg.cc/QCtgBWPN/unnamed.png" },
+{ text: "Klucze i tickety", emoji: "" },
+{ text: "Dzienne gemy z world bossów", emoji: "" },
+{ text: "Liquid shop (alchemia)", emoji: "" },
+{ text: "Town shops", emoji: "" },
+{ text: "Stampy – zniżka", emoji: "" },
+{ text: "Masterclassy – zniżka", emoji: "" },
+{ text: "Bubble za atomy", emoji: "" },
+{ text: "Sneaking – dzienne symbole", emoji: "" },
+{ text: "Spice – dzienne przyprawy", emoji: "" },
+{ text: "Jeweled cogs & tiny cog", emoji: "https://i.postimg.cc/QCtgBWPN/unnamed.png" },
+{ text: "Minesweeper – zużycie żyć", emoji: "https://i.postimg.cc/QCtgBWPN/unnamed.png" },
+{ text: "Summoning – zużycie żyć", emoji: "" },
+{ text: "Research – kliknięcie obserwacji", emoji: "https://i.postimg.cc/QCtgBWPN/unnamed.png" },
+{ text: "Spelunking – przeczytanie kartek", emoji: "" },
+{ text: "Dzienne crystale", emoji: "" },
+{ text: "Dr Defacus i Boops", emoji: "" },
+{ text: "Gambit – próba", emoji: "" },
+{ text: "W2 weekly boss", emoji: "" },
+{ text: "Turniej – codzienne zapisanie się", emoji: "https://i.postimg.cc/QCtgBWPN/unnamed.png" },
+{ text: "Taski i questy gildyjne", emoji: "" },
+{ text: "Spike trap minigame", emoji: "" },
+{ text: "Picnic stowaway quest", emoji: "" },
+{ text: "Random event", emoji: "" }
+];
+
+const today = new Date().toLocaleDateString();
+const storageKey = "checklist-premium-" + today;
+
+let saved = JSON.parse(localStorage.getItem(storageKey)) || { 
+    selected: [], 
+    completed: [], 
+    celebrated: false 
+};
+let draggedItem = null;
+
+// --- Render ---
+function render() {
+    const checklist = document.getElementById("checklist");
+    const tiles = document.getElementById("tiles");
+    checklist.innerHTML = "";
+    tiles.innerHTML = "";
+
+    saved.selected.forEach((taskObj, index) => {
+        const li = document.createElement("li");
+        li.className = "task-item";
+        li.draggable = true;
+        li.dataset.index = index;
+
+        li.addEventListener("dragstart", () => { draggedItem = index; li.style.opacity = "0.5"; });
+        li.addEventListener("dragend", () => { li.style.opacity = "1"; });
+        li.addEventListener("dragover", (e) => e.preventDefault());
+        li.addEventListener("drop", (e) => { e.preventDefault(); reorderTasks(draggedItem, Number(li.dataset.index)); });
+
+        const span = document.createElement("span");
+        span.className = "task-name";
+        span.appendChild(document.createTextNode(taskObj.text));
+        
+        if(taskObj.emoji){
+            const img = document.createElement("img");
+            img.src = taskObj.emoji;
+            img.style.width = "20px";
+            img.style.marginLeft = "8px";
+            img.style.verticalAlign = "middle";
+            span.appendChild(img);
+        }
+
+        if(saved.completed.find(t => t.text === taskObj.text)) span.classList.add("completed");
+        span.onclick = () => toggleComplete(taskObj);
+
+        const deleteBtn = document.createElement("span");
+        deleteBtn.innerHTML = "🗑";
+        deleteBtn.className = "delete-btn";
+        deleteBtn.onclick = (e) => { e.stopPropagation(); removeTask(taskObj); };
+
+        li.appendChild(span);
+        li.appendChild(deleteBtn);
+        checklist.appendChild(li);
+    });
+
+    allTasks.forEach(taskObj => {
+        if(!saved.selected.find(t => t.text === taskObj.text)){
+            const div = document.createElement("div");
+            div.className = "tile";
+            div.textContent = taskObj.text;
+            div.onclick = () => addTask(taskObj);
+            tiles.appendChild(div);
+        }
+    });
+
+    updateProgress();
+    updateTilesHeight();
+    localStorage.setItem(storageKey, JSON.stringify(saved));
+}
+
+// --- Funkcje ---
+function addTask(taskObj){ saved.selected.push(taskObj); render(); }
+function removeTask(taskObj){ 
+    saved.selected = saved.selected.filter(t => t.text !== taskObj.text); 
+    saved.completed = saved.completed.filter(t => t.text !== taskObj.text); 
+    render(); 
+}
+
+function toggleComplete(taskObj) {
+    const isCompleted = saved.completed.find(t => t.text === taskObj.text);
+    if (isCompleted) {
+        saved.completed = saved.completed.filter(t => t.text !== taskObj.text);
+        saved.celebrated = false;
+    } else {
+        saved.completed.push(taskObj);
+    }
+    
+    if (saved.selected.length > 0 && saved.completed.length === saved.selected.length) {
+        if (!saved.celebrated) {
+            launchCelebration();
+            saved.celebrated = true;
+        }
+    }
+    render();
+}
+
+function updateProgress() {
+    const total = saved.selected.length;
+    const done = saved.completed.length;
+    const percentage = total === 0 ? 0 : (done / total * 100);
+    document.getElementById("progress").style.width = percentage + "%";
+}
+
+function launchCelebration() {
+    confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#ffd966', '#ff8c66', '#e65c5c']
+    });
+
+    const msg = document.getElementById("congratsMessage");
+    msg.classList.add("show");
+    setTimeout(() => msg.classList.remove("show"), 5000);
+}
+
+function clearCompleted() { 
+    saved.completed = []; 
+    saved.celebrated = false; 
+    render(); 
+}
+
+// --- Przeciąganie ---
+function reorderTasks(from, to){
+    if(from===to) return;
+    const moved = saved.selected.splice(from,1)[0];
+    saved.selected.splice(to,0,moved);
+    render();
+}
+
+// --- Obsługa Kafelków ---
+const addTaskHeader = document.getElementById("addTaskHeader");
+const tilesWrapper = document.getElementById("tilesWrapper");
+const tilesContainer = document.getElementById("tiles");
+
+addTaskHeader.addEventListener("click", () => {
+    if(tilesWrapper.style.maxHeight==="0px" || tilesWrapper.style.maxHeight==="") {
+        tilesWrapper.style.maxHeight = tilesContainer.scrollHeight+"px";
+        tilesContainer.classList.add("show");
+    } else {
+        tilesWrapper.style.maxHeight = "0";
+        tilesContainer.classList.remove("show");
+    }
+});
+
+function updateTilesHeight(){ 
+    if(tilesWrapper.style.maxHeight!=="0px" && tilesWrapper.style.maxHeight!=="") 
+        tilesWrapper.style.maxHeight = tilesContainer.scrollHeight+"px"; 
+}
+
+// --- Glunko ---
+window.addEventListener('load',()=>{
+    const glunko=document.getElementById("glunko");
+    let pos=0,direction=1;
+    function moveGlunko(){
+        const screenWidth=document.documentElement.clientWidth;
+        const glunkoWidth=glunko.getBoundingClientRect().width;
+        pos+=direction*0.1;
+        if(pos+glunkoWidth>screenWidth){ direction=-1; }
+        if(pos<0){ direction=1; }
+        glunko.style.left=pos+"px";
+        glunko.style.transform=`scaleX(${direction===1?1:-1})`;
+        requestAnimationFrame(moveGlunko);
+    }
+    moveGlunko();
+});
+
+document.getElementById("clearCompleted").addEventListener("click", clearCompleted);
+render();
+</script>
+</body>
+</html>
