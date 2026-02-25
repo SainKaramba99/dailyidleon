@@ -280,7 +280,6 @@
         <li><span style="color: #ffd966;"></span> <strong>Personalizacja:</strong> Przeciągaj zadania, aby ustalić własną kolejność priorytetów.</li>
 		<li><span style="color: #ffd966;"></span> <strong>Odznacz wszystko:</strong> Kliknięcie w ⌛ wyczyści Twoją listę i pozwoli zacząć od nowa.</li>		
         <li><span style="color: #ffd966;"></span> <strong>Przekreślony Golden Pocketwatch:</strong> Ikonka przekreślonego złotego zegarka oznacza, że po jego użyciu dana aktywność się nie resetuje.</li>
-        <li><span style="color: #ffd966;"></span> <strong>Auto-reset:</strong> Twoje postępy zerują się automatycznie każdego dnia o północy.</li>
         <li><span style="color: #ffd966;"></span> <strong>Zapis danych:</strong> Wszystko zapisuje się w pamięci Twojej przeglądarki.</li>
         <li><span style="color: #ffd966;"></span> <strong>Glunko:</strong> Jest tutaj, żebyś nie czuł się samotny podczas grindu!</li>
     </ul>
@@ -336,8 +335,7 @@ const allTasks = [
 { text: "Random event", emoji: "" }
 ];
 
-const today = new Date().toLocaleDateString();
-const storageKey = "checklist-premium-" + today;
+const storageKey = "checklist-premium";
 
 let saved = JSON.parse(localStorage.getItem(storageKey)) || { 
     selected: [], 
